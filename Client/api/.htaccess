@@ -1,0 +1,3 @@
+RewriteEngine On
+RewriteBase /api/
+RewriteRule (.*) http://tc.geeksforless.net/~user1/REST/Server/api/$1 [P]
