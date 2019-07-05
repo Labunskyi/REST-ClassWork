@@ -1,6 +1,8 @@
 <?php
 define("HOST","localhost");
-define("USER","user1");
-define("PASSWORD","user1");
-define("DB_NAME","user1");
+define("USER", "root");
+define("PASSWORD", "");
+define("DB_NAME", "users");
+
+define ('ERR_CAR_ID_INVALID','Car id is ivalid!');
 ?>

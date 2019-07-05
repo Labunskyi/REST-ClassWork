@@ -3,196 +3,86 @@ let orderForm = document.getElementById("order-form");
 let userInfo = document.getElementById("user-info");
 let loginForm = document.getElementById("login");
 let registrationForm = document.getElementById("registration");
+let carDetails = document.getElementById("details");
+let orderDetails = document.getElementById("orderdetails");
+let findDetails = document.getElementById("finddetails");
+
+//var $savedUser = JSON.parse(localStorage.getItem("user") || '{}');
+//$('span[name=infoUsername]').text($savedUser.username);
+//console.log($savedUser);
 
 function getCarList() {
     results.style.display = 'block';
     orderForm.style.display = 'none';
-    let url = 'api/carshop/.json';
+    let url = 'http://rest-classwork.local/Server/api/carshop/car/.json';
     $.get(url,  function (data) {
-        showOnTable(data);
 		console.log(data);
+		let table = carsListToTable(data);
+        results.innerHTML = table;
+		
     }, "json");
 }
 
 function getDetails(id) {
-    let url = 'api/carshop/'+id+'/.json';
+    let url = 'http://rest-classwork.local/Server/api/carshop/car/'+id+'/.json';
     $.get(url, function (data) {
-        showOnDetails(data)
+       
+		let table = objToTable(data);
+		let html = table;
+		
+		carDetails.innerHTML = html;
     }, "json");
-}
-
-function searchCars() {
-    results.style.display = 'block';
-    orderForm.style.display = 'none';
-    let url = 'api/cars/.json';
-    let formData = {
-        'filter': {
-            'mark': $('select[name=mark]').val(),
-            'model': $('input[name=model]').val(),
-            'year': $('input[name=year]').val(),
-            'engine': $('input[name=engine]').val(),
-            'color': $('select[name=color]').val(),
-            'maxspeed': $('input[name=maxspeed]').val(),
-            'price': $('input[name=price]').val(),
-        },
-    };
-    $.get(url, formData, function (data) {
-        showOnTable(data);
-    }, "json");
-
 }
 
 function order() {
-    let url = 'api/orders/';
-    let formData = {
-        'action': 'order',
-        'orderData': {
-            'idcar': $('input[name=order-car-id]').val(),
-            'firstname': $('input[name=name]').val(),
-            'lastname': $('input[name=surname]').val(),
-            'payment': $('select[name=paytype]').val(),
-        }
-    };
-    if (formData.orderData.firstname && formData.orderData.lastname){
-        $.post(url, formData, function (data) {
-           orderForm.style.display = 'none';
-            results.style.display = 'block';
-            if (data['errors']) {
-                results.innerHTML = '<h3 class="text-danger">Error: ' + data.errors + '</h3>';
-            } else {
-                let id = data.id;
-                results.innerHTML = "<h3 class='text-success'>The car with id=" + id + " is successfully ordered!</h3>";
-            }
+	
+	let token = sendToken();
+	console.log(token);
+	if(token) {
+		let url = 'http://rest-classwork.local/Server/api/orders/orders/';
+		let formData = {
+        
+			'orderData': {
+				'userid': token.userid,
+				'carid': $('input[name=order-car-id]').val(),
+				'name': $('input[name=name]').val(),
+				'payment': $('select[name=payment]').val(),
+			}
+		};
+		if (formData.orderData.name){
+			$.post(url, formData, function (data) {
+			var obj = $.parseJSON(data);	
+			results.innerHTML = "<h3 class='text-success'>The car with id=" + obj.carid + " is successfully ordered!</h3>";    
         }, "text");
-    }else{
-        let errorMsg="";
-        if (!formData.orderData.firstname){
-            errorMsg += "<p>The name is empty!</p>";
-        }
-        if (!formData.orderData.lastname){
-            errorMsg += "<p>The surname is empty!</p>";
-        }
-        document.getElementById("errorsOrderForm").innerHTML = errorMsg;
-    }
+		} else {
+			let errorMsg="";
+			if (!formData.orderData.name){
+				errorMsg += "<p>The name is empty!</p>";
+			}
+			document.getElementById("errorsOrderForm").innerHTML = errorMsg;
+		}
+	} else {
+		errorMsg = "<p>Please register or login to order!</p>";
+        document.getElementById("errorsLoginOrderForm").innerHTML = errorMsg;
+	}
 
 }
-
-function getOrderForm(id) {
-    document.getElementById("order-car-id").value = id;
-    orderForm.style.display = 'block';
-    results.style.display = 'none';
-}
-
-function login(){
-    let url = 'api/users/';
-
-    $.ajax({
-        url: url,
-        type: 'PUT',
-        dataType: 'json',
-        success: function(response) {
-            $('span[name=infoUsername]').text(response.username);
-            loginForm.style.display = 'none';
-            userInfo.style.display = 'block';
-        }
-     });
-}
-
-function logout(){
-    let url = 'api/users/';
-
-    $.ajax({
-        url: url,
-        type: 'DELETE',
-        dataType: 'json',
-        beforeSend: function(xhr){
-            xhr.setRequestHeader('HTTP/1.0 401 Unauthorized');
-        },
-        statusCode: {
-            401: function() {
-                loginForm.style.display = 'block';
-                userInfo.style.display = 'none';
-            }
-          },
-        success: function(response) {
-            loginForm.style.display = 'block';
-            userInfo.style.display = 'none';
-        },
-        error: function(response){
-            if (response.status==401){
-                loginForm.style.display = 'block';
-                userInfo.style.display = 'none';
-            }
-        }
-     });
-}
-
-function getRegisterForm(){
-    $('#registration').show();
-    $('#login').hide();
-    
-}
-
-function register(){
-    let url = 'api/users/';
-    let formData = $('#registrationForm').serializeArray();
-    $.post(url, formData, function (data) {
-        $('#registration').hide();
-                $('#login').show();
-    }, "text");
-    // $.ajax({
-    //     url: url,
-    //     type: 'POST',
-    //     data: data,
-    //     dataType: 'json',
-    //     success: function(response) {
-    //         $('#registration').hide();
-    //         $('#login').show();
-    //     }
-    //  });
-}
-
-function showOnTable(data) {
-    if (data.length != 0) {
-        if (data['errors']) {
-            results.innerHTML = '<h3 class="text-danger">Error: ' + data.errors + '</h3>';
-        } else {
-            let table = carsListToTable(data);
-            results.innerHTML = table;
-        }
-    } else {
-        results.innerHTML = '<h3>No cars found.</h3>';
-    }
-    document.getElementById("details").innerHTML = "";
-}
-
-function showOnDetails(entry) {
-    let t = document.getElementById("details");
-    let table = objToTable(entry);
-    let html = "<h3>Car details</h3>" + table;
-    t.innerHTML = html;
-}
-
 
 function carsListToTable(cars) {
     let table = '<table class="table" id="table">';
     if (cars.length) {
         table += '<tr class="row">';
-        table += '<th class="col-lg-1">id</th> <th class="col-lg-4">mark</th> ' +
-            '<th class="col-lg-5">model</th> <th class="col-lg-1"></th> <th class="col-lg-1"></th>';
+        table += '<th class="col-md-1">id</th> <th class="col-md-3">mark</th> ' +
+            '<th class="col-md-3">model</th><th class="col-md-3"></th>';
         table += '</tr>';
         for (let i in cars) {
             let id = cars[i]['CarId'];
             table += '<tr class="row">';
-            table += '<td class="col-lg-1">' + id + '</td> <td class="col-lg-4">' +
-                cars[i]['Brand'] + '</td> <td class="col-lg-5">' + cars[i]['Model'] + '</td>';
-            table += '<td class="col-lg-1">' +
+            table += '<td class="col-md-1">' + id + '</td> <td class="col-md-3">' +
+                cars[i]['Brand'] + '</td> <td class="col-md-3">' + cars[i]['Model'] + '</td>';
+            table += '<td class="col-md-3">' +
                 '<button type="submit" class="btn btn-primary"' +
                 'onclick="getDetails(' + id + ')">Details</button>' +
-                '</td>';
-            table += '<td class="col-lg-1">' +
-                '<button type="submit" class="btn btn-danger"' +
-                'onclick="getOrderForm(' + id + ')">Order</button>' +
                 '</td>';
             table += '</tr>';
         }
@@ -207,18 +97,27 @@ function objToTable(o) {
         table += '<tr>';
         for (key in o[0]) {
             table += '<th>' + key + '</th>';
+			
         }
         table += '</tr>';
         for (row in o) {
+			
             table += '<tr>';
             for (cell in o[row]) {
                 table += '<td>' + o[row][cell] + '</td>';
+				
             }
+			
             table += '</tr>';
+			table += '<td class="col-sm-1" style="padding-left: 0px;">' +
+					'<button type="submit" class="btn btn-danger"' +
+					'onclick="getOrderForm(' + o[row]['CarId'] + ')">Order</button>' +
+					'</td>';
         }
     } else {
         table += '<tr>';
         for (key in o) {
+			
             table += '<th>' + key + '</th>';
         }
         table += '</tr>';
@@ -229,6 +128,234 @@ function objToTable(o) {
         }
         table += '</tr>';
     }
+	
+    table += '</table>';
+    return table;
+}
+
+function getOrderForm(id) {
+	
+    document.getElementById("order-car-id").value = id;
+    orderForm.style.display = 'block';
+  
+}
+
+function getRegisterForm(){
+    $('#registration').show();
+    $('#login').hide();
+    
+}
+
+function register(){
+    let url = 'http://rest-classwork.local/Server/api/users/users/';
+    let datas = $('#registrationForm').serializeArray();
+	
+	let formData = {
+            'username': datas[0].value,
+            'password': datas[1].value,  
+        }
+	if (formData.username && formData.password){
+	$.post(url, formData, function (data) {
+
+		var obj = $.parseJSON(data);
+		if (obj.name) {
+			document.getElementById("resultsRegister").innerHTML = "<h3 class='text-success'>" + obj.name + " is successfully registered!</h3>";
+			$('#registration').hide();
+			//$('#login').show();
+		} else { 
+			errorMsg = "<p>The name is already used!</p>";
+			document.getElementById("errorsRegister").innerHTML = errorMsg;
+		}
+    }, "text");
+	} 
+	else {
+        let errorMsg="";
+        if (!formData.username){
+            errorMsg += "<p>The name is empty!</p>";
+        } 
+		if (!formData.password){
+            errorMsg += "<p>The password is empty!</p>";
+        }
+        document.getElementById("errorsRegisterForm").innerHTML = errorMsg;
+    }
+}
+
+function getLoginForm(){
+    $('#registration').hide();
+    $('#login').show();
+    
+}
+
+function login(){
+    let url = 'http://rest-classwork.local/Server/api/users/userslogin/';
+	let data = $('#loginForm').serializeArray();
+	
+	let formData = {
+            'username': data[0].value,
+            'password': data[1].value,  
+        }
+		
+    $.ajax({
+        url: url,
+        type: 'POST',
+		data: formData,
+        dataType: 'json',
+        success: function(response) {
+			
+			if (response) {
+			localStorage.setItem("user", JSON.stringify(response));
+			var savedUser = JSON.parse(localStorage.getItem("user"));
+			
+            loginForm.style.display = 'none';
+			document.getElementById("login-register").style.display = 'none';
+            userInfo.style.display = 'block';
+			$('span[name=infoUsername]').text(savedUser.username);
+			} else {
+				errorMsg = "<p>The wrong password or username!</p>";
+				document.getElementById("errorsLogin").innerHTML = errorMsg;
+			}
+        }
+     });
+}
+
+function logout(){
+    	 localStorage.clear();
+		 userInfo.style.display = 'none';
+		 loginForm.style.display = 'none';
+		 document.getElementById("login-register").style.display = 'block';
+}
+
+function sendToken(){
+	let url = 'http://rest-classwork.local/Server/api/orders/token/';
+	let savedUser = JSON.parse(localStorage.getItem("user") || '{}');
+	let formData = {
+		'token': savedUser.token		
+	}
+	var msg = $.ajax({type: "POST", url: url, dataType: 'text', data: formData, async: false}).responseText;
+
+	var obj = $.parseJSON(msg);
+	//console.log(msg);
+	if (obj === null) {
+		return false;
+	} else {
+		
+		return obj;
+	}	
+}
+
+function getOrderList() {
+    
+	let token = sendToken();
+	console.log(token);
+	if (token) {
+		let formData = {
+			'userid': token.userid		
+		}
+		let url = 'http://rest-classwork.local/Server/api/orders/orderlist/';
+		$.post(url, formData, function (data) {
+		console.log(formData);
+		console.log(data);
+		var obj = $.parseJSON(data);
+		
+		let table = objToOrderTable(obj);
+		let html = table;
+		
+		orderDetails.innerHTML = html;
+		}, "text");
+	} else {
+		errorMsg = "<p>Please register or login to get list cars!</p>";
+        document.getElementById("errorsGetOrderForm").innerHTML = errorMsg;
+	}
+}
+
+function objToOrderTable(o) {
+    let table = '<table class="table" id="table">';
+
+    if (o) {
+		
+        table += '<tr>';
+        for (key in o[0]) {
+            table += '<th>' + key + '</th>';
+			
+        }
+        table += '</tr>';
+        for (row in o) {
+			
+            table += '<tr>';
+            for (cell in o[row]) {
+                table += '<td>' + o[row][cell] + '</td>';
+				
+            }
+			
+            table += '</tr>';
+
+        }
+    } else {
+		errorMsg = "<p>No yet cars!</p>";
+        document.getElementById("errorsGetOrderForm").innerHTML = errorMsg;
+    }
+	
+    table += '</table>';
+    return table;
+}
+
+function find() {
+	let datas = $('#findForm').serializeArray();
+	console.log(datas);
+	let formData = {
+            'brand': datas[0].value,
+            'model': datas[1].value,  
+			'capacity': datas[2].value, 
+			'year': datas[3].value, 
+			'colour': datas[4].value, 
+			'speed': datas[5].value,
+			'price': datas[6].value,
+        }
+	if (formData.year) {
+		let url = 'http://rest-classwork.local/Server/api/carshop/findcars/';
+		$.post(url, formData, function (data) {
+		console.log(formData);
+		console.log(data);
+		var obj = $.parseJSON(data);
+		
+		let table = objToFindOrderTable(obj);
+		let html = table;
+		
+		findDetails.innerHTML = html;
+		}, "text");
+	} else {
+		errorMsg = "<p>The year field is required!</p>";
+		document.getElementById("errorsFind").innerHTML = errorMsg;
+	}
+}
+
+function objToFindOrderTable(o) {
+    let table = '<table class="table" id="table">';
+
+    if (o) {
+		
+        table += '<tr>';
+        for (key in o[0]) {
+            table += '<th>' + key + '</th>';
+			
+        }
+        table += '</tr>';
+        for (row in o) {
+			
+            table += '<tr>';
+            for (cell in o[row]) {
+                table += '<td>' + o[row][cell] + '</td>';
+				
+            }
+			
+            table += '</tr>';
+
+        }
+    } else {
+		errorMsg = "<p>No cars!</p>";
+        document.getElementById("errorsFindCarForm").innerHTML = errorMsg;
+    }
+	
     table += '</table>';
     return table;
 }

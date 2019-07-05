@@ -1,155 +1,62 @@
 <?php
+
+include_once "Viewer.php";
+
 class RestServer
 {
-    private $service;
-    public function __construct($service)
+
+    public function __construct($className)
     {
         try
         {
-            $this->parseMethod($service);
+            $this->parseMethod($className);
         }
         catch (Exception $e)
         {
             echo json_encode(['errors' => $e->getMessage()]);
         }
     }
-    private function parseMethod($service)
+    private function parseMethod($className)
     {
-        $this->service = $service;
-		//print_r($service);
+        $this->className = $className;
         $url = $_SERVER['REQUEST_URI'];
-		//print_r($url);
-        list($d, $c, $b, $a, $db, $table, $path) = explode('/', $url, 7);
-        $params = explode('/', $url);
-		//print_r($params);
-		
-		//echo("таблица: "  .$table);
-		
-		//echo("путь: "  .$path);
+        list($b, $a, $db, $className, $methodName, $path) = explode('/', $url, 6);
+        $params = explode('/', $url, 2);
         $method = $_SERVER['REQUEST_METHOD'];
-		//print_r($method);
-        $funcName = ucfirst($table);
-		//print_r($funcName);
         $funcParams = explode('/', $path);
-		//print_r($funcParams);
         $result = '';
         $viewType = '.json';
         switch ($method) {
             case 'GET':
                 $viewType = array_pop($funcParams);
-                $viewType = explode('?', $viewType)[0];
-                $result = $this->setMethod('get' . $funcName, $funcParams);
+                //$viewType = explode('?', $viewType)[0];
+                $result = $this->setMethod('get' . $methodName, $funcParams);
                 break;
             case 'POST':
-                $result = $this->setMethod('post' . $funcName, $funcParams);
+                $result = $this->setMethod('post' . $methodName, $funcParams);
                 break;
             case 'PUT':
-            $result = $this->setMethod('put' . $funcName, $funcParams);
+            $result = $this->setMethod('put' . $methodName, $funcParams);
                 break;
             case 'DELETE':
-            $result = $this->setMethod('delete' . $funcName, $funcParams);
+            $result = $this->setMethod('delete' . $methodName, $funcParams);
                 break;
             default:
                 return false;
         }
-        $this->show_results($result, $viewType);
-		//print_r($result);
+		$view = new Viewer();
+        return $view->show_results($result, $viewType);
     }
-    private function setMethod($funcName, $param = false)
+    public function setMethod($methodName, $param = false)
     {
-        $ret = false;
-        if (method_exists($this->service, $funcName))
+        if (method_exists($this->className, $methodName))
         {
-            $ret = call_user_func([$this->service, $funcName], $param);
-        }
-        return $ret;
+            return call_user_func([$this->className, $methodName], $param);
+        } else {
+			return "No such method: " . $methodName;
+		}
+
     }
-    private function show_results($result, $viewType = '.json')
-    {
-        header('Access-Control-Allow-Origin: *');
-        switch ($viewType) {
-            case '.json':
-                header('Content-Type: application/json');
-                echo json_encode($result);
-                break;
-            case '.txt':
-                header('Content-type: text/plain');
-                echo $this->toText($result);
-                break;
-            case '.xhtml':
-                header('Content-type: text/html');
-                echo $this->toHtml($result);
-                break;
-            case '.xml':
-                header('Content-type: application/xml');
-                echo $this->toXml($result);
-                break;
-            default:
-                echo 'No such type!';
-                break;
-        }
-    }
-    private function toText($obj)
-    {
-        return print_r($obj);
-    }
-    private function toHtml($obj)
-    {
-        $res = '<table>';
-        if (is_array($obj))
-        {
-            $first = $obj[0];
-            $res .= '<tr>';
-            foreach ($first as $key => $val)
-            {
-                $res .= '<th>' . $key . '</th>';
-            }
-            $res .= '</tr>';
-            foreach ($obj as $item)
-            {
-                $res .= '<tr>';
-                foreach ($item as $field)
-                {
-                    $res .= '<td>' . $field . '</td>';
-                }
-            }
-            $res .= '</tr>';
-        }
-        elseif (is_object($obj))
-        {
-            $first = $obj;
-            $res .= '<tr>';
-            foreach ($first as $key => $val)
-            {
-                $res .= '<th>' . $key . '</th>';
-            }
-            $res .= '</tr>';
-            $res .= '<tr>';
-            foreach ($obj as $field)
-            {
-                $res .= '<td>' . $field . '</td>';
-            }
-            $res .= '</tr>';
-        }
-        $res .= '</table>';
-        return $res;
-    }
-    private function toXml($obj)
-    {
-        $xml = new SimpleXMLElement('<cars/>');
-        $arrToParse = $obj;
-        if (is_object($obj))
-        {
-            $arrToParse = [$obj];
-        }
-        foreach ($arrToParse as $item)
-        {
-            $car = $xml->addChild('car');
-            foreach ($item as $key => $val)
-            {
-                $car->addChild($key, $val);
-            }
-        }
-        return $xml->asXML();
-    }
+    
 }
+
