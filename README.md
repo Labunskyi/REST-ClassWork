@@ -1,3 +1,3 @@
 # REST-ClassWork
 
-A simple REST API
+A simple RESTfull API
